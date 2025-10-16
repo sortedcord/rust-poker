@@ -3,41 +3,23 @@ use rand::Rng;
 use std::io;
 
 fn main() {
-    // println!("Guess the number");
-    // println!("Generating secret number");
-    //
-    // let secret_number = rand::thread_rng().gen_range(1..=100);
-    //
-    // loop {
-    //     println!("Please input your guess");
-    //     let mut guess = String::new();
-    //
-    //     io::stdin()
-    //         .read_line(&mut guess)
-    //         .expect("Failed to read line");
-    //
-    //     println!("You guessed: {guess}");
-    //     let guess: u32 = match guess.trim().parse() {
-    //         Ok(num) => num,
-    //         Err(_) => continue,
-    //     };
-    //     match guess.cmp(&secret_number) {
-    //         Ordering::Less => println!("Too small!"),
-    //         Ordering::Greater => println!("Too big!"),
-    //         Ordering::Equal => {
-    //             println!("You win!");
-    //             break;
-    //         }
-    //     }
-    // }
-    //
     let mut starting_balance = 50;
+    let cards = [
+        "2", "3", "4", "5", "6", "7", "8", "9", "10", "Jack", "Queen", "King", "Ace",
+    ];
 
     loop {
-        let user_card = rand::thread_rng().gen_range(1..=13);
-        let cpu_card = rand::thread_rng().gen_range(1..=13);
+        if starting_balance <= 0 {
+            println!("You are out of money! Game over.");
+            break;
+        } else if starting_balance >= 100 {
+            println!("You reached 100! You win!");
+            break;
+        }
+        let user_card = rand::thread_rng().gen_range(0..=12);
+        let cpu_card = rand::thread_rng().gen_range(0..=12);
 
-        println!("Your card: {user_card}");
+        println!("Your card: {}", cards[user_card]);
         println!("1: I have better cards\n2: I have worse cards");
 
         let mut user_action = String::new();
