@@ -1,5 +1,5 @@
 use rand::prelude::*;
-use std::{io, vec};
+use std::{io, thread::current, vec};
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 enum CardSuit {
@@ -19,6 +19,14 @@ struct Card {
 enum PlayerType {
     Human,
     Cpu,
+}
+
+enum PlayerActions {
+    Fold,
+    Bet,
+    Call,
+    Raise,
+    Check,
 }
 
 #[derive(PartialEq, Eq)]
@@ -72,6 +80,28 @@ fn generate_card(seen_cards: &mut Vec<Card>) -> Card {
             break new_card;
         }
     }
+}
+
+fn action_fold(mut player: &mut Player) {
+    player.cards.clear();
+    println!("{name} Folds their turn", name = player.name);
+}
+
+fn action_bet(mut player: &mut Player, mut pool: &mut i32, mut current_bet: &mut i32) {
+    let mut rng = rand::rng();
+    let amount: i32 = match player.player_type {
+        PlayerType::Human => {
+            println!("Enter your bet amount: ");
+            read_int()
+        }
+        PlayerType::Cpu => rng.random_range(1..=player.score),
+    };
+
+    *pool += amount;
+    player.score -= amount;
+    *current_bet = amount;
+
+    println!("{name} bets {amount}", name = player.name);
 }
 
 fn main() {
@@ -146,4 +176,7 @@ fn main() {
     for card in user.cards {
         println!("{} of {:#?}", convert_number(card.number), card.suit);
     }
+
+    // Start preflop betting round
+    let mut current_bet = 0;
 }
