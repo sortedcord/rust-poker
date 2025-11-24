@@ -21,11 +21,17 @@ enum PlayerType {
     Cpu,
 }
 
+#[derive(PartialEq, Eq)]
+enum PlayerAction {
+    Bet,
+    Fold,
+}
+
 #[derive(PartialEq, Eq, Clone)]
 struct Player {
     name: String,
     player_type: PlayerType,
-    score: i32,
+    chips: i32,
     cards: Vec<Card>,
 }
 
@@ -78,6 +84,31 @@ fn display_card(card: &Card) {
     println!("{} of {:#?}", convert_number(&card.number), card.suit);
 }
 
+fn ask_action(player: &Player) -> PlayerAction {
+    let mut player_action: PlayerAction;
+    if player.player_type == PlayerType::Human {
+        let mut action_string = String::new();
+        player_action = loop {
+            println!("{} please specify your action: ", player.name);
+            io::stdin()
+                .read_line(&mut action_string)
+                .expect("Invalid Input");
+            player_action = match action_string.trim() {
+                "bet" => PlayerAction::Bet,
+                "fold" => PlayerAction::Fold,
+                _ => {
+                    println!("Invalid action specififed, try again");
+                    continue;
+                }
+            };
+            break player_action;
+        }
+    } else {
+        player_action = PlayerAction::Bet;
+    }
+    player_action
+}
+
 fn action_fold(player: &mut Player) {
     player.cards.clear();
     println!("{name} Folds their turn", name = player.name);
@@ -87,15 +118,15 @@ fn action_bet(player: &mut Player, pool: &mut i32, current_bet: &mut i32) {
     let mut rng = rand::rng();
     let amount: i32 = match player.player_type {
         PlayerType::Human => {
-            println!("You have {} chips", player.score);
+            println!("You have {} chips", player.chips);
             println!("Enter your bet amount: ");
             read_int()
         }
-        PlayerType::Cpu => rng.random_range(1..=player.score),
+        PlayerType::Cpu => rng.random_range(1..=player.chips),
     };
 
     *pool += amount;
-    player.score -= amount;
+    player.chips -= amount;
     *current_bet = amount;
 
     println!("{name} bets {amount}", name = player.name);
@@ -109,20 +140,25 @@ fn main() {
     let mut user = Player {
         name: String::from("sortedcord"),
         player_type: PlayerType::Human,
-        score: 50,
+        chips: 50,
         cards: vec![],
     };
 
     let mut cpu: Player = Player {
         name: String::from("computer"),
         player_type: PlayerType::Cpu,
-        score: 50,
+        chips: 50,
         cards: vec![],
     };
 
     // Round starts
     loop {
         let mut seen_cards: Vec<Card> = Vec::new();
+
+        // Display current chips
+        for player in [&user, &cpu] {
+            println!("{} has {} chips", player.name, player.chips)
+        }
 
         //Blind selection
         let big_blind: &Player = [&user, &cpu].choose(&mut rng).unwrap();
@@ -132,7 +168,7 @@ fn main() {
         if *big_blind == user {
             let bet = rng.random_range(25..=45);
             pot += bet;
-            cpu.score -= pot;
+            cpu.chips -= pot;
 
             println!("CPU bet {pot} ");
 
@@ -140,7 +176,7 @@ fn main() {
                 println!("Enter your big blind: ");
                 let bet: i32 = read_int();
 
-                if bet > user.score {
+                if bet > user.chips {
                     println!("Needs to be less or equal to your current holdings, try again!");
                     continue;
                 }
@@ -150,18 +186,18 @@ fn main() {
                     continue;
                 }
 
-                user.score -= bet;
+                user.chips -= bet;
                 pot += bet;
                 break pot;
             };
         } else {
             println!("Enter your small blind: ");
             let bet: i32 = read_int();
-            user.score -= bet;
+            user.chips -= bet;
             pot += bet;
             let bet = rng.random_range(pot..=50);
             println!("CPU sets big blind as: {bet}");
-            cpu.score -= bet;
+            cpu.chips -= bet;
             pot += bet;
         }
 
@@ -169,6 +205,7 @@ fn main() {
 
         // Deal hole cards
         for player in [&mut user, &mut cpu] {
+            player.cards.push(generate_card(&mut seen_cards));
             player.cards.push(generate_card(&mut seen_cards));
         }
 
@@ -180,32 +217,27 @@ fn main() {
 
         // Start preflop betting round
         let mut current_bet = 0;
-        loop {
-            println!("Enter the action (bet, fold): ");
-            let mut user_action = String::new();
-            io::stdin()
-                .read_line(&mut user_action)
-                .expect("Wrong input");
 
-            match user_action.trim() {
-                "bet" => action_bet(&mut user, &mut pot, &mut current_bet),
-                "fold" => action_fold(&mut user),
-                _ => {
-                    println!("Not a valid action, try again");
-                    continue;
-                }
-            };
+        //User plays
+        let user_action = ask_action(&user);
 
-            break;
+        match user_action {
+            PlayerAction::Bet => action_bet(&mut user, &mut pot, &mut current_bet),
+            PlayerAction::Fold => {
+                action_fold(&mut user);
+                break;
+            }
         }
 
         // CPU plays
-        let cpu_action = ["bet", "fold"].choose(&mut rng).unwrap();
+        let cpu_action = ask_action(&cpu);
 
-        match *cpu_action {
-            "bet" => action_bet(&mut cpu, &mut pot, &mut current_bet),
-            "fold" => action_fold(&mut cpu),
-            _ => panic!("CPU performed invalid action"),
+        match cpu_action {
+            PlayerAction::Bet => action_bet(&mut cpu, &mut pot, &mut current_bet),
+            PlayerAction::Fold => {
+                action_fold(&mut cpu);
+                break;
+            }
         };
 
         //Dealer reveal the cards
@@ -217,5 +249,6 @@ fn main() {
             display_card(&n_card);
             *slot = Some(n_card);
         }
+        println!("\n\n");
     }
 }
