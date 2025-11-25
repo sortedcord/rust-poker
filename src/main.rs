@@ -195,7 +195,7 @@ fn main() {
             let bet: i32 = read_int();
             user.chips -= bet;
             pot += bet;
-            let bet = rng.random_range(pot..=50);
+            let bet = rng.random_range(pot..=49);
             println!("CPU sets big blind as: {bet}");
             cpu.chips -= bet;
             pot += bet;
